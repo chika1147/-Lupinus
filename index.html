@@ -1,1 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUPINUS — AI Music</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--np:#e060a0;--nb:#a080ff;--ns:#ffb0d0;--dbg:#080810;--cbg:#100818;--cbg2:#140d20}
+body{background:var(--dbg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#f0e8ff;min-height:100vh}
+#pCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(8,8,16,0.97);border-bottom:0.5px solid rgba(224,96,160,0.2);position:sticky;top:0;z-index:200}
+.logo-wrap{display:flex;align-items:center;gap:9px}
+.logo-icon{width:30px;height:30px;border-radius:50%;background:rgba(224,96,160,0.15);border:0.5px solid rgba(224,96,160,0.4);display:flex;align-items:center;justify-content:center;font-size:13px}
+.logo{font-size:15px;font-weight:500;letter-spacing:4px;color:var(--ns)}
+.logo-sub{font-size:9px;letter-spacing:2px;color:rgba(224,96,160,0.5)}
+.nav-links{display:flex;gap:20px;align-items:center}
+.nav-links a{font-size:12px;color:rgba(240,232,255,0.55);text-decoration:none;letter-spacing:1px;cursor:pointer;position:relative}
+.nav-links a::after{content:'';display:block;height:1px;background:var(--np);width:0;transition:width 0.3s;margin-top:2px}
+.nav-links a:hover{color:var(--ns)}
+.nav-links a:hover::after{width:100%}
+.nav-tag{font-size:10px;padding:3px 10px;border-radius:12px;background:rgba(224,96,160,0.12);color:var(--np);border:0.5px solid rgba(224,96,160,0.3);cursor:pointer;letter-spacing:1px}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none}
+.hamburger span{display:block;width:22px;height:2px;background:rgba(240,232,255,0.7);border-radius:1px;transition:all 0.3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-menu{display:none;position:fixed;top:58px;left:0;width:100%;background:rgba(8,8,16,0.98);border-bottom:0.5px solid rgba(224,96,160,0.2);z-index:199;max-height:0;overflow:hidden;transition:max-height 0.4s ease,padding 0.3s}
+.mobile-menu.open{max-height:300px;padding:16px 20px 20px}
+.mobile-menu a{display:block;padding:12px 0;font-size:14px;color:rgba(240,232,255,0.7);text-decoration:none;letter-spacing:2px;border-bottom:0.5px solid rgba(224,96,160,0.1);cursor:pointer}
+.mobile-menu a:last-child{border-bottom:none}
+.mobile-menu a:hover{color:var(--ns)}
+@media(max-width:560px){.nav-links{display:none}.hamburger{display:flex}.mobile-menu{display:block}}
+.hero{padding:60px 24px 48px;text-align:center;background:var(--cbg2);position:relative;overflow:hidden}
+.hero-tag{font-size:10px;letter-spacing:4px;color:rgba(224,96,160,0.8);margin-bottom:14px}
+.hero h1{font-size:28px;font-weight:500;color:#fff0f8;letter-spacing:2px;margin-bottom:10px;line-height:1.5}
+.hero h1 em{color:var(--ns);font-style:normal}
+.typing-wrap{font-size:13px;color:rgba(240,232,255,0.5);max-width:360px;margin:0 auto 28px;line-height:1.9;min-height:44px}
+#typingText::after{content:'|';animation:blink 0.7s infinite;color:var(--np)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.petal-deco{color:rgba(255,180,210,0.35);font-size:11px;letter-spacing:6px;margin-bottom:18px}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-p{background:var(--np);color:#fff0f8;border:none;padding:12px 26px;border-radius:20px;font-size:12px;letter-spacing:2px;cursor:pointer;transition:transform 0.15s}
+.btn-p:hover{transform:scale(1.04)}
+.btn-o{background:transparent;color:var(--nb);border:0.5px solid var(--nb);padding:12px 26px;border-radius:20px;font-size:12px;letter-spacing:1px;cursor:pointer;transition:transform 0.15s,background 0.2s}
+.btn-o:hover{background:rgba(160,128,255,0.1);transform:scale(1.04)}
+.fade-up{opacity:0;transform:translateY(28px);transition:opacity 0.6s ease,transform 0.6s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+.section{padding:32px 24px}
+.divider{height:0.5px;background:rgba(224,96,160,0.1);margin:0 24px}
+.sec-label{font-size:10px;letter-spacing:4px;color:rgba(224,96,160,0.7);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:0.5px;background:rgba(224,96,160,0.15)}
+.player-section{padding:32px 24px}
+.player-card{background:#0a0814;border-radius:18px;padding:24px;border:0.5px solid rgba(224,96,160,0.2)}
+.top-area{display:flex;align-items:center;gap:18px;margin-bottom:16px}
+.art-frame{position:relative;flex-shrink:0}
+.art-disc{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#1e0028,#08002a);border:2px solid rgba(224,96,160,0.4);display:flex;align-items:center;justify-content:center;font-size:32px}
+.art-disc.spinning{animation:spin 8s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.art-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(224,96,160,0.15);animation:rspin 10s linear infinite}
+.art-ring2{position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(160,128,255,0.1);animation:rspin 16s linear infinite reverse}
+@keyframes rspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.now-info{flex:1;min-width:0}
+.now-badge{font-size:9px;letter-spacing:3px;color:rgba(224,96,160,0.7);margin-bottom:5px}
+.now-title{font-size:20px;font-weight:500;color:#fff0f8;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-artist{font-size:12px;color:rgba(240,232,255,0.45);margin-bottom:8px}
+.now-genre{display:inline-block;font-size:10px;padding:2px 9px;border-radius:10px;background:rgba(160,128,255,0.12);color:#c0a8ff;border:0.5px solid rgba(160,128,255,0.25)}
+.vis-container{border-radius:12px;overflow:hidden;background:#03030a;margin-bottom:16px}
+#visCanvas{display:block;width:100%;height:140px}
+.prog-wrap{margin-bottom:8px;cursor:pointer;padding:8px 0}
+.prog-bg{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;position:relative}
+.prog-fg{height:100%;background:linear-gradient(90deg,#e060a0,#a080ff);border-radius:2px;width:0%;position:relative}
+.prog-dot{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;right:-6px;top:-4px;opacity:0;transition:opacity 0.2s}
+.prog-wrap:hover .prog-dot{opacity:1}
+.time-row{display:flex;justify-content:space-between;font-size:11px;color:rgba(240,232,255,0.35);margin-bottom:22px}
+.ctrl-main{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px}
+.btn-prev,.btn-next,.btn-stop{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);color:rgba(240,232,255,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s,transform 0.15s}
+.btn-prev:hover,.btn-next:hover{background:rgba(255,255,255,0.1);transform:scale(1.05)}
+.btn-prev:active,.btn-next:active{transform:scale(0.95)}
+.btn-play{width:66px;height:66px;border-radius:50%;background:var(--np);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,background 0.2s;position:relative}
+.btn-play::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(224,96,160,0.35);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.14);opacity:0}}
+.btn-play:hover{background:#f070b0;transform:scale(1.05)}
+.btn-play:active{transform:scale(0.95)}
+.btn-stop:hover{background:rgba(224,96,160,0.15);border-color:rgba(224,96,160,0.3);transform:scale(1.05)}
+.btn-stop:active{transform:scale(0.95)}
+.vol-row{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.vol-slider{flex:1;accent-color:var(--np)}
+.vol-val{font-size:11px;color:rgba(240,232,255,0.35);min-width:24px;text-align:right}
+.track-list{display:flex;flex-direction:column;gap:5px}
+.trk{display:flex;align-items:center;gap:12px;padding:10px 13px;background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.06);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s}
+.trk:hover{border-color:rgba(224,96,160,0.3);background:rgba(224,96,160,0.05);transform:translateX(3px)}
+.trk.active{border-color:rgba(224,96,160,0.45);background:rgba(224,96,160,0.08)}
+.trk-num{font-size:11px;color:rgba(240,232,255,0.25);width:18px;text-align:center;flex-shrink:0}
+.trk.active .trk-num{color:var(--np)}
+.trk-info{flex:1;min-width:0}
+.trk-name{font-size:13px;color:#f0e8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trk.active .trk-name{color:var(--ns)}
+.trk-artist{font-size:11px;color:rgba(240,232,255,0.38);margin-top:1px}
+.trk-genre{font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(160,128,255,0.1);color:#c0a8ff;border:0.5px solid rgba(160,128,255,0.2);flex-shrink:0}
+.bar-mini{display:flex;gap:2px;align-items:flex-end;height:13px;flex-shrink:0}
+.bar-mini span{width:3px;background:var(--np);border-radius:1px;height:3px}
+.bar-mini.on span{animation:ba 0.7s ease-in-out infinite alternate}
+.bar-mini span:nth-child(2){animation-delay:.2s}
+.bar-mini span:nth-child(3){animation-delay:.4s}
+@keyframes ba{from{height:3px}to{height:12px}}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.rel-card{background:var(--cbg);border:0.5px solid rgba(255,255,255,0.05);border-radius:14px;padding:12px;cursor:pointer;transition:border-color 0.2s,transform 0.2s}
+.rel-card:hover{border-color:rgba(224,96,160,0.35);transform:translateY(-4px)}
+.rel-cover{width:100%;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:9px}
+.c1{background:linear-gradient(135deg,#200030,#001040)}
+.c2{background:linear-gradient(135deg,#200010,#100030)}
+.c3{background:linear-gradient(135deg,#001020,#100020)}
+.c4{background:linear-gradient(135deg,#180020,#001018)}
+.rel-name{font-size:13px;font-weight:500;color:#f0e8ff;margin-bottom:3px}
+.rel-type{font-size:11px;color:rgba(240,232,255,0.35)}
+.vocal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.vocal-card{background:var(--cbg);border:0.5px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px 14px;text-align:center;position:relative;overflow:hidden;cursor:pointer;transition:transform 0.3s,border-color 0.2s}
+.vocal-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(224,96,160,0.12),transparent 70%);opacity:0;transition:opacity 0.3s}
+.vocal-card:hover{transform:translateY(-5px);border-color:rgba(224,96,160,0.4)}
+.vocal-card:hover::before{opacity:1}
+.v-avatar-wrap{position:relative;width:60px;height:60px;margin:0 auto 14px}
+.v-avatar{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:1.5px solid rgba(224,96,160,0.3);position:relative;z-index:1}
+.v-ring{position:absolute;inset:-4px;border-radius:50%;border:0.5px solid rgba(224,96,160,0.2);animation:rspin 8s linear infinite}
+.v-ring2{position:absolute;inset:-8px;border-radius:50%;border:0.5px solid rgba(160,128,255,0.15);animation:rspin 12s linear infinite reverse}
+.va1{background:linear-gradient(135deg,#300025,#10003a)}
+.va2{background:linear-gradient(135deg,#003028,#20003a)}
+.va3{background:linear-gradient(135deg,#002030,#280015)}
+.va4{background:linear-gradient(135deg,#301800,#001828)}
+.v-name{font-size:14px;font-weight:500;color:#fff0f8;margin-bottom:3px}
+.v-role{font-size:11px;color:rgba(240,232,255,0.38);margin-bottom:8px}
+.v-tag{display:inline-block;font-size:10px;padding:3px 9px;border-radius:10px;background:rgba(224,96,160,0.1);color:var(--ns);border:0.5px solid rgba(224,96,160,0.2);margin-bottom:6px}
+.v-songs{font-size:10px;color:rgba(240,232,255,0.3)}
+.tmpl-section{padding:32px 24px}
+.tmpl-hero{background:linear-gradient(135deg,#1a0828,#0d0820 50%,#120a28);border:0.5px solid rgba(224,96,160,0.35);border-radius:18px;padding:28px 24px;position:relative;overflow:hidden}
+.tmpl-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(224,96,160,0.06);pointer-events:none}
+.tmpl-badge{display:inline-block;font-size:10px;padding:4px 12px;border-radius:12px;background:rgba(224,96,160,0.2);color:var(--ns);border:0.5px solid rgba(224,96,160,0.4);letter-spacing:2px;margin-bottom:14px}
+.tmpl-title{font-size:18px;font-weight:500;color:#fff0f8;margin-bottom:9px;letter-spacing:1px;line-height:1.4}
+.tmpl-title span{color:var(--ns)}
+.tmpl-desc{font-size:12px;color:rgba(240,232,255,0.55);line-height:1.9;margin-bottom:18px}
+.tmpl-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px}
+.tmpl-tag{font-size:10px;padding:3px 9px;border-radius:10px;background:rgba(160,128,255,0.08);color:var(--nb);border:0.5px solid rgba(160,128,255,0.2)}
+.tmpl-price-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.tmpl-price{font-size:26px;font-weight:500;color:#fff0f8}
+.tmpl-price span{font-size:13px;color:rgba(240,232,255,0.4);margin-left:4px}
+.btn-buy{background:linear-gradient(90deg,var(--np),var(--nb));color:#fff0f8;border:none;padding:12px 28px;border-radius:20px;font-size:12px;cursor:pointer;letter-spacing:1px;transition:transform 0.15s}
+.btn-buy:hover{transform:scale(1.05)}
+.tmpl-note{font-size:11px;color:rgba(240,232,255,0.3);margin-top:8px}
+.footer{padding:22px 24px;border-top:0.5px solid rgba(224,96,160,0.12);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.f-logo{font-size:13px;letter-spacing:4px;color:rgba(255,180,210,0.5)}
+.f-links{display:flex;gap:16px;flex-wrap:wrap}
+.f-links a{font-size:12px;color:rgba(240,232,255,0.35);text-decoration:none;transition:color 0.2s}
+.f-links a:hover{color:var(--ns)}
+.f-copy{font-size:11px;color:rgba(240,232,255,0.2)}
+</style>
+</head>
+<body>
 
+<canvas id="pCanvas"></canvas>
+
+<nav class="nav">
+  <div class="logo-wrap">
+    <div class="logo-icon">🌸</div>
+    <div><div class="logo">LUPINUS</div><div class="logo-sub">AI MUSIC</div></div>
+  </div>
+  <div class="nav-links">
+    <a href="#s-player">Music</a>
+    <a href="#s-releases">Releases</a>
+    <a href="#s-vocals">Vocals</a>
+    <span class="nav-tag" onclick="document.getElementById('s-template').scrollIntoView({behavior:'smooth'})">Template ✦</span>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#s-player" onclick="closeMenu()">♪ Music</a>
+  <a href="#s-releases" onclick="closeMenu()">Releases</a>
+  <a href="#s-vocals" onclick="closeMenu()">Vocals</a>
+  <a href="#s-template" onclick="closeMenu()">✦ Template</a>
+</div>
+
+<div class="hero">
+  <div class="petal-deco">✦ 🌸 ✦ 🌸 ✦</div>
+  <div class="hero-tag">AI MUSIC × CREATOR</div>
+  <h1>君に届く<em>未来の音</em></h1>
+  <div class="typing-wrap"><span id="typingText"></span></div>
+  <div class="hero-btns">
+    <button class="btn-p" onclick="document.getElementById('s-player').scrollIntoView({behavior:'smooth'})">♪ 今すぐ聴く</button>
+    <button class="btn-o" onclick="document.getElementById('s-template').scrollIntoView({behavior:'smooth'})">Template を見る</button>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="player-section fade-up" id="s-player">
+  <div class="sec-label">MUSIC PLAYER</div>
+  <div class="player-card">
+    <div class="top-area">
+      <div class="art-frame">
+        <div class="art-ring"></div><div class="art-ring2"></div>
+        <div class="art-disc" id="artDisc">⚡</div>
+      </div>
+      <div class="now-info">
+        <div class="now-badge" id="nowBadge">READY</div>
+        <div class="now-title" id="nowTitle">Flash</div>
+        <div class="now-artist" id="nowArtist">Lupinus feat. メア</div>
+        <span class="now-genre" id="nowGenre">J-POP TRANCE</span>
+      </div>
+    </div>
+
+    <div class="vis-container">
+      <canvas id="visCanvas"></canvas>
+    </div>
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-bg">
+        <div class="prog-fg" id="progFg"><div class="prog-dot"></div></div>
+      </div>
+    </div>
+    <div class="time-row"><span id="timeCur">0:00</span><span id="timeTot">0:00</span></div>
+
+    <div class="ctrl-main">
+      <button class="btn-prev" id="btnPrev" title="前の曲">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="2" height="10" rx="1" fill="currentColor"/><path d="M13 3L6 8l7 5V3z" fill="currentColor"/></svg>
+      </button>
+      <button class="btn-play" id="btnPlay">
+        <svg id="iconPlay" width="22" height="22" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="white"/></svg>
+        <svg id="iconPause" width="22" height="22" viewBox="0 0 24 24" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1" fill="white"/><rect x="14" y="4" width="4" height="16" rx="1" fill="white"/></svg>
+      </button>
+      <button class="btn-stop" id="btnStop" title="停止">
+        <svg width="15" height="15" viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="2" fill="currentColor"/></svg>
+      </button>
+      <button class="btn-next" id="btnNext" title="次の曲">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="12" y="3" width="2" height="10" rx="1" fill="currentColor"/><path d="M3 3l7 5-7 5V3z" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <div class="vol-row">
+      <svg width="16" height="14" viewBox="0 0 16 14" fill="none" style="flex-shrink:0">
+        <path d="M1 4.5h3l3.5-3v11L4 9.5H1v-5z" fill="rgba(240,232,255,0.45)"/>
+        <path d="M10 2a6 6 0 010 10M11.5 4a3.5 3.5 0 010 6" stroke="rgba(240,232,255,0.45)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+      </svg>
+      <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="75" step="1" oninput="setVol(this.value)">
+      <span class="vol-val" id="volVal">75</span>
+    </div>
+
+    <div class="track-list" id="trackList"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section fade-up" id="s-releases">
+  <div class="sec-label">RELEASES</div>
+  <div class="rel-grid">
+    <div class="rel-card" onclick="loadTrack(0);doPlay()"><div class="rel-cover c1">⚡</div><div class="rel-name">Flash</div><div class="rel-type">Single · 2025</div></div>
+    <div class="rel-card" onclick="loadTrack(1);doPlay()"><div class="rel-cover c2">📱</div><div class="rel-name">Left on Read</div><div class="rel-type">Single · 2025</div></div>
+    <div class="rel-card" onclick="loadTrack(2);doPlay()"><div class="rel-cover c3">💧</div><div class="rel-name">雫のワルツ</div><div class="rel-type">Single · 2024</div></div>
+    <div class="rel-card" onclick="loadTrack(3);doPlay()"><div class="rel-cover c4">🌊</div><div class="rel-name">青に消えたキミ</div><div class="rel-type">Single · 2024</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section fade-up" id="s-vocals">
+  <div class="sec-label">VOCAL CHARACTERS</div>
+  <div class="vocal-grid">
+    <div class="vocal-card"><div class="v-avatar-wrap"><div class="v-ring"></div><div class="v-ring2"></div><div class="v-avatar va1">🎤</div></div><div class="v-name">メア</div><div class="v-role">Lead Vocal</div><div class="v-tag">TRANCE</div><div class="v-songs">Flash</div></div>
+    <div class="vocal-card"><div class="v-avatar-wrap"><div class="v-ring"></div><div class="v-ring2"></div><div class="v-avatar va2">🎵</div></div><div class="v-name">Noa / ノア</div><div class="v-role">R&B Vocal</div><div class="v-tag">TRAP R&B</div><div class="v-songs">Left on Read</div></div>
+    <div class="vocal-card"><div class="v-avatar-wrap"><div class="v-ring"></div><div class="v-ring2"></div><div class="v-avatar va3">🎼</div></div><div class="v-name">澪 / Miu</div><div class="v-role">Classic Vocal</div><div class="v-tag">WALTZ</div><div class="v-songs">雫のワルツ</div></div>
+    <div class="vocal-card"><div class="v-avatar-wrap"><div class="v-ring"></div><div class="v-ring2"></div><div class="v-avatar va4">🌙</div></div><div class="v-name">なお / Nao</div><div class="v-role">J-POP Vocal</div><div class="v-tag">J-POP</div><div class="v-songs">青に消えたキミ</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="tmpl-section fade-up" id="s-template">
+  <div class="sec-label">WEB TEMPLATE</div>
+  <div class="tmpl-hero">
+    <div class="tmpl-badge">✦ NEW RELEASE ✦</div>
+    <div class="tmpl-title">Lupinus <span>AI Music</span><br>Website Template</div>
+    <div class="tmpl-desc">AIミュージシャン・クリエイター向けのサイバーロマンチックウェブテンプレート。虹色ウェーブビジュアライザー・動くBGMプレイヤー・花びらエフェクト付き。Gumroadからすぐ使えます。</div>
+    <div class="tmpl-tags">
+      <span class="tmpl-tag">HTML / CSS / JS</span>
+      <span class="tmpl-tag">Web Audio API</span>
+      <span class="tmpl-tag">Rainbow Wave</span>
+      <span class="tmpl-tag">Responsive</span>
+      <span class="tmpl-tag">GitHub Pages対応</span>
+      <span class="tmpl-tag">花びらエフェクト</span>
+    </div>
+    <div class="tmpl-price-row">
+      <div>
+        <div class="tmpl-price">$9.99<span>USD</span></div>
+        <div class="tmpl-note">一度購入で永久利用可能</div>
+      </div>
+      <button class="btn-buy" onclick="window.open('https://gumroad.com','_blank')">Gumroad で購入 ✦</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer fade-up">
+  <div class="f-logo">LUPINUS ✦</div>
+  <div class="f-links">
+    <a href="https://tiktok.com" target="_blank">TikTok</a>
+    <a href="https://distrokid.com" target="_blank">DistroKid</a>
+    <a href="https://gumroad.com" target="_blank">Gumroad</a>
+    <a href="https://github.com/chika1147" target="_blank">GitHub</a>
+  </div>
+  <div class="f-copy">© 2025 ちこたろ</div>
+</footer>
+
+<audio id="audioEl" crossorigin="anonymous"></audio>
+
+<script>
+// =============================================
+// トラック設定 — srcを実際のmp3パスに変更
+// 例: "audio/flash.mp3"
+// =============================================
+const tracks = [
+  {title:"Flash", artist:"feat. メア", genre:"J-POP TRANCE", art:"⚡",
+   src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
+  {title:"Left on Read", artist:"feat. Noa", genre:"TRAP R&B", art:"📱",
+   src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"},
+  {title:"雫のワルツ", artist:"feat. 澪", genre:"WALTZ", art:"💧",
+   src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
+  {title:"青に消えたキミ", artist:"feat. なお", genre:"J-POP", art:"🌊",
+   src:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"},
+];
+
+// =============================================
+// AUDIO SETUP
+// =============================================
+const audio = document.getElementById('audioEl');
+audio.volume = 0.75;
+let cur = 0, playing = false;
+let audioCtx = null, analyser = null, srcNode = null, timeDomArr = null, freqArr = null;
+
+function setupAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.85;
+  timeDomArr = new Float32Array(analyser.fftSize);
+  freqArr = new Uint8Array(analyser.frequencyBinCount);
+  srcNode = audioCtx.createMediaElementSource(audio);
+  srcNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+
+// =============================================
+// RAINBOW WAVE VISUALIZER
+// =============================================
+const visCanvas = document.getElementById('visCanvas');
+const vCtx = visCanvas.getContext('2d');
+let phase = 0;
+const WAVE_LAYERS = 4;
+
+function resizeVis() {
+  visCanvas.width = visCanvas.offsetWidth * (window.devicePixelRatio || 1);
+  visCanvas.height = visCanvas.offsetHeight * (window.devicePixelRatio || 1);
+}
+resizeVis();
+window.addEventListener('resize', resizeVis);
+
+function getFakeWave(t, layerOffset) {
+  return (
+    Math.sin(phase * 1.8 + t * Math.PI * 4 + layerOffset) * 0.35 +
+    Math.sin(phase * 2.7 + t * Math.PI * 7 + layerOffset) * 0.20 +
+    Math.sin(phase * 1.1 + t * Math.PI * 2 + layerOffset) * 0.30 +
+    Math.sin(phase * 3.4 + t * Math.PI * 11 + layerOffset) * 0.10
+  ) * 0.18;
+}
+
+function drawWave() {
+  requestAnimationFrame(drawWave);
+  const W = visCanvas.width, H = visCanvas.height, CY = H / 2;
+  phase += playing ? 0.035 : 0.009;
+
+  vCtx.fillStyle = 'rgba(3,3,10,1)';
+  vCtx.fillRect(0, 0, W, H);
+
+  let energy = 0;
+  if (analyser && playing) {
+    analyser.getFloatTimeDomainData(timeDomArr);
+    analyser.getByteFrequencyData(freqArr);
+    for (let i = 0; i < freqArr.length; i++) energy += freqArr[i];
+    energy /= freqArr.length * 255;
+  }
+
+  const POINTS = W;
+  const amp = playing ? (0.32 + energy * 0.55) : 0.18;
+
+  for (let layer = 0; layer < WAVE_LAYERS; layer++) {
+    const layerOff = layer * 0.7;
+    const alpha = 0.18 + layer * 0.18;
+    const thk = 1 + layer * 1.2;
+    const hueShift = layer * 28;
+
+    const grad = vCtx.createLinearGradient(0, 0, W, 0);
+    for (let s = 0; s <= 12; s++) {
+      const t = s / 12;
+      const hue = ((t * 360) + phase * 40 + hueShift) % 360;
+      grad.addColorStop(t, `hsla(${Math.round(hue)},100%,65%,${alpha})`);
+    }
+
+    vCtx.beginPath();
+    vCtx.lineWidth = thk;
+    vCtx.strokeStyle = grad;
+    vCtx.shadowBlur = layer === WAVE_LAYERS - 1 ? 18 : 0;
+    vCtx.shadowColor = `hsla(${Math.round((phase * 40 + hueShift) % 360)},100%,70%,0.6)`;
+
+    for (let x = 0; x < POINTS; x++) {
+      const t = x / POINTS;
+      let y;
+      if (timeDomArr && playing) {
+        const idx = Math.floor(t * timeDomArr.length * 0.8);
+        const sample = timeDomArr[Math.min(idx, timeDomArr.length - 1)];
+        const harm = Math.sin(phase * 2 + t * Math.PI * 6 + layer) * 0.08;
+        y = CY + (sample + harm) * H * amp;
+      } else {
+        y = CY + getFakeWave(t + layer * 0.15, layerOff) * H * (1 + layer * 0.3);
+      }
+      x === 0 ? vCtx.moveTo(x, y) : vCtx.lineTo(x, y);
+    }
+    vCtx.stroke();
+
+    // fill under top layer
+    if (layer === WAVE_LAYERS - 1) {
+      vCtx.beginPath();
+      for (let x = 0; x < POINTS; x++) {
+        const t = x / POINTS;
+        let y;
+        if (timeDomArr && playing) {
+          const idx = Math.floor(t * timeDomArr.length * 0.8);
+          const sample = timeDomArr[Math.min(idx, timeDomArr.length - 1)];
+          y = CY + sample * H * amp;
+        } else {
+          y = CY + getFakeWave(t, 0) * H;
+        }
+        x === 0 ? vCtx.moveTo(x, y) : vCtx.lineTo(x, y);
+      }
+      vCtx.lineTo(W, H); vCtx.lineTo(0, H); vCtx.closePath();
+      const fg = vCtx.createLinearGradient(0, CY, 0, H);
+      fg.addColorStop(0, `hsla(${Math.round((phase * 40) % 360)},100%,60%,0.08)`);
+      fg.addColorStop(1, 'rgba(0,0,0,0)');
+      vCtx.fillStyle = fg;
+      vCtx.fill();
+
+      vCtx.beginPath();
+      for (let x = 0; x < POINTS; x++) {
+        const t = x / POINTS;
+        let y;
+        if (timeDomArr && playing) {
+          const idx = Math.floor(t * timeDomArr.length * 0.8);
+          const sample = timeDomArr[Math.min(idx, timeDomArr.length - 1)];
+          y = CY + sample * H * amp;
+        } else {
+          y = CY + getFakeWave(t, 0) * H;
+        }
+        x === 0 ? vCtx.moveTo(x, y) : vCtx.lineTo(x, y);
+      }
+      vCtx.lineTo(W, 0); vCtx.lineTo(0, 0); vCtx.closePath();
+      const tg = vCtx.createLinearGradient(0, 0, 0, CY);
+      tg.addColorStop(0, 'rgba(0,0,0,0)');
+      tg.addColorStop(1, `hsla(${Math.round((phase * 40 + 180) % 360)},100%,60%,0.06)`);
+      vCtx.fillStyle = tg;
+      vCtx.fill();
+    }
+  }
+
+  // center line
+  const hc = Math.round((phase * 60) % 360);
+  vCtx.beginPath();
+  vCtx.moveTo(0, CY); vCtx.lineTo(W, CY);
+  vCtx.strokeStyle = `hsla(${hc},100%,70%,${playing ? 0.35 : 0.12})`;
+  vCtx.lineWidth = 0.5;
+  vCtx.shadowBlur = 0;
+  vCtx.stroke();
+
+  // beat flash
+  if (analyser && playing && energy > 0.65) {
+    const fa = (energy - 0.65) * 0.18;
+    const fg2 = vCtx.createRadialGradient(W / 2, CY, 0, W / 2, CY, W * 0.6);
+    fg2.addColorStop(0, `hsla(${hc},100%,70%,${fa})`);
+    fg2.addColorStop(1, 'rgba(0,0,0,0)');
+    vCtx.fillStyle = fg2;
+    vCtx.fillRect(0, 0, W, H);
+  }
+}
+drawWave();
+
+// =============================================
+// PLAYER FUNCTIONS
+// =============================================
+function fmt(s) {
+  if (!s || isNaN(s)) return '0:00';
+  return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+}
+
+function setUI(p) {
+  document.getElementById('iconPlay').style.display = p ? 'none' : 'block';
+  document.getElementById('iconPause').style.display = p ? 'block' : 'none';
+  const disc = document.getElementById('artDisc');
+  p ? disc.classList.add('spinning') : disc.classList.remove('spinning');
+  document.getElementById('nowBadge').textContent = p ? 'NOW PLAYING' : 'PAUSED';
+}
+
+function updateInfo() {
+  const t = tracks[cur];
+  document.getElementById('artDisc').textContent = t.art;
+  document.getElementById('nowTitle').textContent = t.title;
+  document.getElementById('nowArtist').textContent = 'Lupinus ' + t.artist;
+  document.getElementById('nowGenre').textContent = t.genre;
+}
+
+function renderList() {
+  const el = document.getElementById('trackList');
+  el.innerHTML = '';
+  tracks.forEach((t, i) => {
+    const d = document.createElement('div');
+    d.className = 'trk' + (i === cur ? ' active' : '');
+    d.innerHTML = `
+      <div class="trk-num">${i === cur
+        ? `<div class="bar-mini ${playing ? 'on' : ''}"><span></span><span></span><span></span></div>`
+        : (i + 1)}</div>
+      <div class="trk-info">
+        <div class="trk-name">${t.title}</div>
+        <div class="trk-artist">${t.artist}</div>
+      </div>
+      <div class="trk-genre">${t.genre}</div>`;
+    d.onclick = () => { loadTrack(i); doPlay(); };
+    el.appendChild(d);
+  });
+}
+
+function loadTrack(i) {
+  cur = i;
+  audio.src = tracks[i].src;
+  audio.load();
+  playing = false;
+  setUI(false);
+  updateInfo();
+  renderList();
+  document.getElementById('progFg').style.width = '0%';
+  document.getElementById('timeCur').textContent = '0:00';
+  document.getElementById('timeTot').textContent = '0:00';
+  document.getElementById('nowBadge').textContent = 'LOADING...';
+}
+
+function doPlay() {
+  setupAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  audio.play().then(() => {
+    playing = true; setUI(true); renderList();
+  }).catch(() => {
+    document.getElementById('nowBadge').textContent = 'TAP PLAY';
+  });
+}
+
+function doPause() { audio.pause(); playing = false; setUI(false); renderList(); }
+
+function doStop() {
+  audio.pause(); audio.currentTime = 0; playing = false;
+  setUI(false);
+  document.getElementById('progFg').style.width = '0%';
+  document.getElementById('timeCur').textContent = '0:00';
+  document.getElementById('nowBadge').textContent = 'STOPPED';
+  renderList();
+}
+
+document.getElementById('btnPlay').onclick = () => { playing ? doPause() : (audio.src ? doPlay() : (loadTrack(cur), doPlay())); };
+document.getElementById('btnStop').onclick = doStop;
+document.getElementById('btnNext').onclick = () => { loadTrack((cur + 1) % tracks.length); doPlay(); };
+document.getElementById('btnPrev').onclick = () => { loadTrack((cur - 1 + tracks.length) % tracks.length); doPlay(); };
+
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  const pct = (audio.currentTime / audio.duration) * 100;
+  document.getElementById('progFg').style.width = pct.toFixed(1) + '%';
+  document.getElementById('timeCur').textContent = fmt(audio.currentTime);
+  document.getElementById('timeTot').textContent = fmt(audio.duration);
+});
+audio.addEventListener('ended', () => { loadTrack((cur + 1) % tracks.length); doPlay(); });
+
+document.getElementById('progWrap').addEventListener('click', (e) => {
+  if (!audio.duration) return;
+  const r = document.getElementById('progWrap').getBoundingClientRect();
+  audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+});
+
+function setVol(v) { audio.volume = v / 100; document.getElementById('volVal').textContent = v; }
+
+loadTrack(0);
+
+// =============================================
+// HAMBURGER MENU
+// =============================================
+function toggleMenu() {
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+function closeMenu() {
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('mobileMenu').classList.remove('open');
+}
+
+// =============================================
+// SCROLL ANIMATION
+// =============================================
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// =============================================
+// TYPING EFFECT
+// =============================================
+const msgs = ["AIが紡ぐサイバーロマンチックサウンド。","J-POP・トランス・R&B…","Lupinusの音楽世界へようこそ。","新曲 Flash & Left on Read 配信中！"];
+let mi = 0, ci = 0, del = false;
+const tel = document.getElementById('typingText');
+setInterval(() => {
+  const m = msgs[mi];
+  if (!del) { tel.textContent = m.slice(0, ++ci); if (ci >= m.length) del = true; }
+  else { tel.textContent = m.slice(0, --ci); if (ci <= 0) { del = false; mi = (mi + 1) % msgs.length; } }
+}, del ? 40 : 80);
+
+// =============================================
+// FLOWER PARTICLES
+// =============================================
+const pCanvas = document.getElementById('pCanvas');
+const pCtx = pCanvas.getContext('2d');
+const SHAPES = ['🌸', '✦', '·', '✿', '♡', '🌺', '❋', '⁕'];
+const particles = [];
+function resizeP() { pCanvas.width = window.innerWidth; pCanvas.height = window.innerHeight; }
+resizeP();
+window.addEventListener('resize', resizeP);
+class P {
+  constructor(init) { this.reset(init); }
+  reset(init) {
+    this.x = Math.random() * pCanvas.width;
+    this.y = init ? Math.random() * pCanvas.height : -20;
+    this.size = Math.random() * 11 + 5;
+    this.sy = Math.random() * 0.65 + 0.25;
+    this.sx = (Math.random() - 0.5) * 0.4;
+    this.rot = Math.random() * Math.PI * 2;
+    this.rs = (Math.random() - 0.5) * 0.025;
+    this.op = Math.random() * 0.38 + 0.08;
+    this.shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    this.sw = Math.random() * Math.PI * 2;
+    this.sws = Math.random() * 0.018 + 0.004;
+    this.swa = Math.random() * 1.8 + 0.4;
+  }
+  update() {
+    this.sw += this.sws;
+    this.x += this.sx + Math.sin(this.sw) * this.swa * 0.3;
+    this.y += this.sy; this.rot += this.rs;
+    if (this.y > pCanvas.height + 20) this.reset(false);
+  }
+  draw() {
+    pCtx.save(); pCtx.globalAlpha = this.op;
+    pCtx.translate(this.x, this.y); pCtx.rotate(this.rot);
+    pCtx.font = this.size + 'px serif';
+    pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
+    pCtx.fillText(this.shape, 0, 0); pCtx.restore();
+  }
+}
+for (let i = 0; i < 80; i++) particles.push(new P(true));
+function pLoop() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(pLoop);
+}
+pLoop();
+</script>
+</body>
+</html>
